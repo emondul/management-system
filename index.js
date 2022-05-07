@@ -1,6 +1,7 @@
 const inquire = require('inquirer');
 const db = require('./config/connection');
 const cTable = require('console.table');
+const inquirer = require('inquirer');
 
 function run() {
     inquire
@@ -96,7 +97,7 @@ async function createDepartment() {
 }
 
 async function createRole() {
-
+    
     const departments = await db.query('SELECT * FROM department')
 
     const departmentChoices = departments.map(department => {
@@ -195,3 +196,61 @@ async function createEmployee() {
             });
         })
 }
+
+async function updateEmployeeRole() {
+    const employees = await db.query('SELECT * FROM employee');
+
+    const employeeRoster = employees.map(employees => {
+        return {
+            name: employees.first_name + " " + employees.last_name,
+            value: employees.id
+        }
+    })
+
+    const roles = await db.query('SELECT * FROM roles');
+
+    const roleSelection = roles.map(roles => {
+        return {
+            name: roles.title,
+            value: roles.id
+        }
+    })
+
+    const employeeUpdates = await inquire
+        .prompt([
+            {
+                type: "list",
+                name: "employee",
+                message: "Which employee will be updated?",
+                choices: employeeRoster
+            },
+            {
+                type: "list",
+                name: "role",
+                message: "What new role will the employee take?",
+                choices: roleSelection
+            },
+            {
+                type: "list",
+                name: "manager",
+                message: "Select the new manager for this employee.",
+                choices: employeeRoster
+            }
+        ]).then((data) => {
+            const sql = `
+                UPDATE employee 
+                SET roles_id = ${data.role}, manager_id = ${data.manager}
+                WHERE id = ${data.employee}`;
+      
+                db.query(sql, (err, result) => {
+                    if (err) throw err; 
+                    console.log('Employee role has been updated.');
+                    if (result) {
+                        run();
+                    }
+            });
+        })
+    run();
+}
+
+run();
